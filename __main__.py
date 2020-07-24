@@ -96,3 +96,50 @@ plot(
 )
 loan_corr.max()
 loan_corr.min()
+
+# Data Pre-processing
+def get_missing_data():
+    df_len = df.shape[0]
+    missing_data = df.isnull().sum()
+
+    return missing_data.apply(lambda x: 100*x/df_len)
+
+
+df = df.drop('emp_title', axis=1)
+
+emp_order = sorted(df['emp_length'].dropna().unique())
+emp_order[0], emp_order[1], emp_order[-1] = (
+    emp_order[-1], emp_order[0], emp_order[1]
+)
+
+plot(
+    sns.countplot,
+    x='emp_length',
+    data=df,
+    order=emp_order,
+    hue='loan_status'
+)
+
+unpaid = df[df['loan_repaid'] == 0].groupby('emp_length')['loan_repaid'].count()
+total = df.groupby('emp_length')['loan_repaid'].count()
+perc = 100 * unpaid / total
+
+plot(
+    sns.barplot,
+    x=perc.index,
+    y=perc.values,
+    order=emp_order
+)
+
+df = df.drop('emp_length', axis=1)
+
+get_missing_data()
+
+df['title'].head()
+df['title'].nunique()
+
+df['purpose'].head()
+
+df = df.drop('title', axis=1)
+
+get_missing_data()
