@@ -143,3 +143,36 @@ df['purpose'].head()
 df = df.drop('title', axis=1)
 
 get_missing_data()
+
+feat_info('mort_acc')
+df['mort_acc'].value_counts()
+df.corr()['mort_acc'].sort_values(ascending=False)
+
+feat_info('total_acc')
+df['total_acc'].value_counts()
+
+
+total_acc_groups = df.groupby('total_acc').mean()['mort_acc']
+
+def fill_mort_acc(row):
+    mort_acc = row['mort_acc']
+    total_acc = row['total_acc']
+
+    if pd.isna(mort_acc):
+        mort_acc = round(total_acc_groups.loc[total_acc])
+
+    return pd.Series(
+        [total_acc, mort_acc],
+        index=['total_acc', 'mort_acc']
+    )
+
+
+mort_acc_fill = df[['total_acc', 'mort_acc']].apply(fill_mort_acc, axis=1)
+
+df['mort_acc'] = mort_acc_fill['mort_acc']
+
+get_missing_data()
+
+df = df.drop(df[pd.isna(df['revol_util'])].index)
+
+df = df.drop(df[pd.isna(df['pub_rec_bankruptcies'])].index)
