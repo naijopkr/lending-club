@@ -176,3 +176,71 @@ get_missing_data()
 df = df.drop(df[pd.isna(df['revol_util'])].index)
 
 df = df.drop(df[pd.isna(df['pub_rec_bankruptcies'])].index)
+
+
+# Categorical Variables and Dummy Variables
+def get_categorical_cols(data: pd.DataFrame):
+    return data.dtypes[data.dtypes == 'O'].index
+
+# Convert 'term' to int64
+df['term'] = pd.Series(df['term'].apply(lambda x: x.split()[0]), dtype='int64')
+df.info()
+
+# Drop grade: redundant with sub_grade
+df = df.drop('grade', axis=1)
+df.info()
+
+# Create dummies
+cols_dummies = [
+    'sub_grade',
+    'verification_status',
+    'application_type',
+    'initial_list_status',
+    'purpose'
+]
+dummies = pd.get_dummies(df[cols_dummies], drop_first=True)
+df = pd.concat([df, dummies], axis=1).drop(cols_dummies, axis=1)
+df.info()
+
+feat_info('home_ownership')
+
+df['home_ownership'].value_counts()
+
+# Convert home ownership 'NONE' and 'ANY' to 'OTHER'
+def convert_ho(label):
+    if label in ['ANY', 'NONE']:
+        return 'OTHER'
+
+    return label
+
+
+df['home_ownership'] = df['home_ownership'].apply(convert_ho)
+home_ownership = pd.get_dummies(df['home_ownership'], drop_first=True)
+
+df = pd.concat([df, home_ownership], axis=1).drop('home_ownership', axis=1)
+df.info()
+
+# Extract zipcode
+df['zipcode'] = df['address'].map(lambda x: x[-5:])
+df['zipcode'].value_counts()
+
+zipcode = pd.get_dummies(df['zipcode'], drop_first=True)
+zipcode.head()
+
+df = pd.concat([df, zipcode], axis=1).drop(['zipcode', 'address'], axis=1)
+df.info()
+
+# Drop issue_d
+df = df.drop('issue_d', axis=1)
+
+feat_info('earliest_cr_line')
+
+df['earliest_cr_year'] = df['earliest_cr_line'].apply(lambda x: int(x[-4:]))
+df = df.drop('earliest_cr_line', axis=1)
+df.info()
+
+get_categorical_cols(df)
+
+df.to_csv('data/cleansed_data.csv', index=False)
+
+# Train test split
