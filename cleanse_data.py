@@ -242,5 +242,3 @@ df.info()
 get_categorical_cols(df)
 
 df.to_csv('data/cleansed_data.csv', index=False)
-
-# Train test split
