@@ -6,14 +6,13 @@ from sklearn.preprocessing import MinMaxScaler
 
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import Dense, Dropout
-from tensorflow.keras.callbacks import EarlyStopping
 
-import matplotlib.pyplot as plt
 
 df = pd.read_csv('data/cleansed_data.csv')
+df = df.drop('loan_status', axis=1)
 df.head()
 
-X = df.drop(['loan_status', 'loan_repaid'], axis=1)
+X = df.drop('loan_repaid', axis=1)
 y = df['loan_repaid']
 
 X_train, X_test, y_train, y_test = train_test_split(
@@ -36,10 +35,14 @@ joblib.dump(scaler, 'data/scaler.save')
 model = Sequential()
 
 model.add(Dense(78, activation='relu'))
-model.add(Dropout(.5))
+model.add(Dropout(.2))
+
 model.add(Dense(39, activation='relu'))
-model.add(Dropout(.5))
+model.add(Dropout(.2))
+
 model.add(Dense(19, activation='relu'))
+model.add(Dropout(.2))
+
 model.add(Dense(1, activation='sigmoid'))
 
 model.compile(loss='binary_crossentropy', optimizer='adam')

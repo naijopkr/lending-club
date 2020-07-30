@@ -1,6 +1,7 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+import numpy as np
 
 df_info = pd.read_csv('data/lending_club_info.csv', index_col='LoanStatNew')
 
@@ -79,9 +80,10 @@ plot(
     palette='coolwarm'
 )
 
-df['loan_repaid'] = df['loan_status'].apply(
-    lambda x: 1 if x == 'Fully Paid' else 0
-)
+df['loan_repaid'] = df['loan_status'].map({
+    'Fully Paid': 1,
+    'Charged Off': 0
+})
 
 
 loan_corr = df.corr()['loan_repaid'].drop('loan_repaid').sort_values()
@@ -154,36 +156,31 @@ df['total_acc'].value_counts()
 
 total_acc_groups = df.groupby('total_acc').mean()['mort_acc']
 
-def fill_mort_acc(row):
-    mort_acc = row['mort_acc']
-    total_acc = row['total_acc']
+def fill_mort_acc(total_acc, mort_acc):
+    if np.isnan(mort_acc):
+        mort_acc = round(total_acc_groups[total_acc])
 
-    if pd.isna(mort_acc):
-        mort_acc = round(total_acc_groups.loc[total_acc])
-
-    return pd.Series(
-        [total_acc, mort_acc],
-        index=['total_acc', 'mort_acc']
-    )
+    return mort_acc
 
 
-mort_acc_fill = df[['total_acc', 'mort_acc']].apply(fill_mort_acc, axis=1)
-
-df['mort_acc'] = mort_acc_fill['mort_acc']
+df['mort_acc'] = df.apply(
+    lambda x: fill_mort_acc(x['total_acc'], x['mort_acc']),
+    axis=1
+)
 
 get_missing_data()
 
-df = df.drop(df[pd.isna(df['revol_util'])].index)
-
-df = df.drop(df[pd.isna(df['pub_rec_bankruptcies'])].index)
+df = df.dropna()
 
 
 # Categorical Variables and Dummy Variables
 def get_categorical_cols(data: pd.DataFrame):
-    return data.dtypes[data.dtypes == 'O'].index
+    return data.select_dtypes(['object']).columns
 
 # Convert 'term' to int64
-df['term'] = pd.Series(df['term'].apply(lambda x: x.split()[0]), dtype='int64')
+df['term'] =df['term'].apply(
+    lambda x: int(x[:3]),
+)
 df.info()
 
 # Drop grade: redundant with sub_grade
@@ -207,21 +204,17 @@ feat_info('home_ownership')
 df['home_ownership'].value_counts()
 
 # Convert home ownership 'NONE' and 'ANY' to 'OTHER'
-def convert_ho(label):
-    if label in ['ANY', 'NONE']:
-        return 'OTHER'
-
-    return label
-
-
-df['home_ownership'] = df['home_ownership'].apply(convert_ho)
+df['home_ownership'] = df['home_ownership'].replace(
+    ['NONE', 'ANY'],
+    'OTHER'
+)
 home_ownership = pd.get_dummies(df['home_ownership'], drop_first=True)
 
 df = pd.concat([df, home_ownership], axis=1).drop('home_ownership', axis=1)
 df.info()
 
 # Extract zipcode
-df['zipcode'] = df['address'].map(lambda x: x[-5:])
+df['zipcode'] = df['address'].apply(lambda x: x[-5:])
 df['zipcode'].value_counts()
 
 zipcode = pd.get_dummies(df['zipcode'], drop_first=True)
@@ -235,7 +228,10 @@ df = df.drop('issue_d', axis=1)
 
 feat_info('earliest_cr_line')
 
-df['earliest_cr_year'] = df['earliest_cr_line'].apply(lambda x: int(x[-4:]))
+df['earliest_cr_year'] = df['earliest_cr_line'].apply(
+    lambda x: int(x[-4:])
+)
+
 df = df.drop('earliest_cr_line', axis=1)
 df.info()
 
